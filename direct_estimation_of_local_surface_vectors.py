@@ -37,3 +37,22 @@ def calculate_disparity_gradient(vergence_angle, version_angle, surface_z):
     ])
 
     return M
+
+# ********* Disparity Gradiant (With viewing geometry known) ********* #
+# Normalizing the disparity gradiant eliminates the gaze angle variable.
+
+def calcualte_disparity_gradiant_known_geometry(vergance_angle, surface_z):
+    X, Y = sp.symbols('X Y', real=True)
+
+    P = sp.diff(surface_z, X)  # ∂Z/∂X
+    Q = sp.diff(surface_z, Y)  # ∂Z/∂Y
+
+    denominator = (np.cos(vergance_angle) - P * np.sin(vergance_angle))
+
+    m_11 = (np.cos(vergance_angle) + P * np.sin(vergance_angle)) / denominator
+    m_12 = (2*Q*np.cos(vergance_angle)*np.sin(vergance_angle)) / denominator
+
+    P = ((m_11 - 1) * np.cos(vergance_angle)) / (m_11 + 1) * np.sin(vergance_angle)
+    Q = m_12/ (m_11 + 1) * np.sin(vergance_angle)
+
+    return P, Q
