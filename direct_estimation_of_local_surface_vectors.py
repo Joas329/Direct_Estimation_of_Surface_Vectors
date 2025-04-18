@@ -5,6 +5,7 @@
 
 import numpy as np
 import sympy as sp
+import cv2
 
 def calculate_vergance_angle(angle_l, angle_r):
     return 0.5*(angle_l - angle_r)
@@ -56,3 +57,39 @@ def calcualte_disparity_gradiant_known_geometry(vergance_angle, surface_z):
     Q = m_12/ (m_11 + 1) * np.sin(vergance_angle)
 
     return P, Q
+
+# ********* Window Second Moment Matrix ********* #
+def calcualte_window_second_moment_matrix(image, window_size, sigma):
+    #In this case, the averaging operator is a gaussian blur (this can be changed for others types as well)
+    image = image.astype(np.float32)
+
+    Lx = cv2.Sobel(image, cv2.CV_32F, 1, 0, ksize=3)
+    Ly = cv2.Sobel(image, cv2.CV_32F, 0, 1, ksize=3)
+
+    Lx2 = Lx ** 2
+    Ly2 = Ly ** 2
+    LxLy = Lx * Ly
+
+    mu11 = cv2.GaussianBlur(Lx2, (window_size, window_size), sigma)
+    mu22 = cv2.GaussianBlur(Ly2, (window_size, window_size), sigma)
+    mu12 = cv2.GaussianBlur(LxLy, (window_size, window_size), sigma)
+
+    return mu11, mu12, mu22 # matrix is symetric so m12 is used twice
+
+def compute_trace(mu11, mu22):
+    return mu11 + mu22
+
+# ********* directional statistics (C~, S~) from the second moment matrix. ********* #
+"""
+- C_tilde: anisotropy (difference between directions)
+- S_tilde: orientation measure
+"""
+def compute_directional_statistics(mu11, mu12, mu22):
+    trace = compute_trace(mu11, mu22)
+    epsilon = 1e-6
+    trace_safe = trace + epsilon
+
+    C_tilde = (mu11 - mu22) / trace_safe
+    S_tilde = (2 * mu12) / trace_safe
+
+    return C_tilde, S_tilde
